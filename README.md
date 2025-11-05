@@ -1,64 +1,66 @@
-# Automation Tools
+# 업무 자동화 도구
 
-업무 자동화를 위한 Python GUI 도구 모음
-
-## 프로젝트 구조
-
-```
-automation-tools/
-├── main_gui.py          # 메인 GUI (모든 도구 연결)
-├── requirements.txt     # 공통 의존성
-├── README.md
-├── tools/               # 도구 모듈 디렉토리
-│   ├── __init__.py      # 도구 등록 시스템
-│   └── renamer/         # 파일명 변경 도구
-│       ├── __init__.py
-│       └── gui.py
-
-```
+업무 자동화를 위한 Python GUI 도구 모음입니다.
 
 ## 설치 방법
 
+### EXE 파일 사용 (권장)
+
+1. `automation-tools.exe` 파일을 다운로드합니다.
+2. 다운로드한 파일을 원하는 위치에 저장합니다.
+3. 더블클릭하여 실행합니다.
+
+**추가 소프트웨어 설치 필요 없음**
+
+### Python으로 실행 (개발자용)
+
+Python이 설치되어 있는 경우:
+
 ```bash
 pip install -r requirements.txt
+python main_gui.py
 ```
 
 ## 사용 방법
 
-```bash
-python main_gui.py
-```
+1. `automation-tools.exe`를 실행합니다.
+2. 메인 화면에서 사용할 도구를 선택합니다.
+3. 선택한 도구의 GUI가 팝업으로 열립니다.
+4. 각 도구의 기능을 사용합니다.
 
-메인 GUI가 실행되면 등록된 도구 목록이 표시됩니다. 원하는 도구를 클릭하면 해당 도구의 GUI가 팝업으로 열립니다.
+## 시스템 요구 사항
 
-## 프로젝트 목록
+- **운영체제**: Windows 10 이상
+- **메모리**: 최소 512MB RAM
+- **디스크**: 약 100MB 여유 공간
 
-- **renamer**: 파일명 일괄 변경 도구
+## 사용 가능한 도구
 
-## 새로운 도구 추가하기
+### 파일명 변경 도구
 
-1. `tools/` 디렉토리 아래에 새 도구 디렉토리 생성 (예: `tools/my_tool/`)
-2. `tools/my_tool/__init__.py` 파일 생성:
-```python
-from tools import ToolInfo, register_tool
-from tools.my_tool.gui import MyToolWindow
+이미지 파일명을 일괄적으로 변경하는 도구입니다.
 
-MY_TOOL_INFO = ToolInfo(
-    name="내 도구",
-    description="도구 설명",
-)
+**주요 기능:**
+- 폴더 내 이미지 파일 일괄 탐색
+- 규칙에 따른 파일명 변경
+- 원본 이름 유지하면서 prefix/postfix 추가
+- 폴더 구조 유지하여 다른 위치로 복사/이동
+- 미리보기 기능으로 변경 내용 확인
 
-class MyTool:
-    def create_widget(self, parent=None):
-        window = MyToolWindow(parent)
-        return window
+## 문제 해결
 
-# 자동 등록됨 (tools/__init__.py에서 import 시)
-```
-3. `tools/my_tool/gui.py`에 GUI 구현 (QMainWindow 또는 QWidget 상속)
+### 프로그램이 실행되지 않을 때
 
-## 개발 환경
+1. Windows Defender나 백신 프로그램에서 차단되는지 확인
+2. 관리자 권한으로 실행 시도
+3. Python 버전으로 실행 (개발자용 README 참고)
 
-- Python 3.x
-- PySide6 (GUI 프레임워크)
+### 도구가 정상 작동하지 않을 때
 
+1. 프로그램을 재시작
+2. Windows 업데이트 확인
+3. 문제가 지속되면 개발자용 README의 이슈 리포트 방법 참고
+
+## 문의 및 지원
+
+문제가 발생하거나 기능 제안이 있으시면 개발자용 README를 참고하여 이슈를 등록해주세요.
