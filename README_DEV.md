@@ -35,9 +35,6 @@ python -m venv venv
 # Windows에서 활성화
 venv\Scripts\activate
 
-# Linux/Mac에서 활성화
-source venv/bin/activate
-```
 
 ### 3. 의존성 설치
 
@@ -288,11 +285,4 @@ Thumbs.db
 2. 변경사항 구현 및 테스트
 3. Pull Request 생성
 
-## 라이선스
-
-(프로젝트 라이선스 정보 추가)
-
-## 문의
-
-개발 관련 문의나 이슈는 프로젝트 이슈 트래커를 사용해주세요.
 

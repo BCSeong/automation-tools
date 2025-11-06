@@ -25,25 +25,10 @@ pyinstaller --onefile --noconsole --name automation-tools main_gui.py
 pyinstaller --onefile --noconsole --name automation-tools --hidden-import PySide6.QtCore --hidden-import PySide6.QtGui --hidden-import PySide6.QtWidgets --hidden-import tools --hidden-import tools.renamer --hidden-import tools.renamer.gui main_gui.py
 ```
 
-## Linux/Mac Bash에서 빌드
-
-### 방법 1: build.spec 파일 사용 (권장)
-
-```bash
-pyinstaller build.spec
-```
-
-### 방법 2: 직접 명령어 사용
-
-```bash
-pyinstaller --onefile --noconsole --name automation-tools main_gui.py
-```
-
 ## 빌드 결과
 
 빌드 완료 후:
 - **Windows**: `dist\automation-tools.exe`
-- **Linux/Mac**: `dist/automation-tools`
 
 ## 빌드 전 확인사항
 
