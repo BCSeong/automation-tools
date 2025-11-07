@@ -1,0 +1,30 @@
+{
+  "rename_modes": {
+    "display": [
+      "새로운 규칙으로 변경",
+      "현재 이름 유지"
+    ],
+    "mapping": {
+      "새로운 규칙으로 변경": "build_new_name",
+      "현재 이름 유지": "build_keep_name"
+    }
+  },
+  "output_modes": {
+    "display": [
+      "원본 위치",
+      "다른 폴더(구조 유지)"
+    ],
+    "mapping": {
+      "원본 위치": "original",
+      "다른 폴더(구조 유지)": "preserve"
+    }
+  },
+  "index_base_options": {
+    "display": ["1", "0"],
+    "mapping": {
+      "1": 1,
+      "0": 0
+    }
+  }
+}
+

@@ -14,9 +14,19 @@ automation-tools/
 ├── README_DEV.md        # 개발자용 문서 (이 파일)
 └── tools/               # 도구 모듈 디렉토리
     ├── __init__.py      # 도구 등록 시스템
-    └── renamer/         # 파일명 변경 도구
-        ├── __init__.py  # 도구 등록 정보
-        └── gui.py       # GUI 구현
+    ├── common/          # 공통 유틸리티
+    │   ├── file_utils.py    # 파일 관련 함수
+    │   ├── path_utils.py    # 경로 관련 함수
+    │   └── ui_utils.py      # UI 관련 함수
+    ├── renamer/         # 파일명 변경 도구 (예제)
+    │   ├── __init__.py
+    │   ├── functions.py     # 도구 전용 함수
+    │   ├── pipeline.py      # 연산 Pipeline
+    │   ├── gui.py           # GUI 구현
+    │   ├── constants.json   # GUI 표시값 <-> 메서드명 매핑
+    │   └── ui/
+    │       └── main.ui      # Designer 파일
+    └── template/        # 새 도구 생성용 템플릿
 ```
 
 ## 개발 환경 설정
@@ -90,30 +100,26 @@ pyinstaller build.spec
 mkdir tools\my_tool
 ```
 
-### 2. GUI 구현
+### 2. 템플릿 사용 (권장)
 
-`tools/my_tool/gui.py` 파일 생성:
+템플릿을 사용하여 빠르게 생성:
 
-```python
-from __future__ import annotations
-from PySide6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget
-
-class MyToolWindow(QMainWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("내 도구")
-        
-        central = QWidget(self)
-        self.setCentralWidget(central)
-        
-        layout = QVBoxLayout(central)
-        label = QLabel("내 도구 GUI")
-        layout.addWidget(label)
+```bash
+# 템플릿 파일 복사
+copy tools\template\__init__.py.template tools\my_tool\__init__.py
+copy tools\template\functions.py.template tools\my_tool\functions.py
+copy tools\template\pipeline.py.template tools\my_tool\pipeline.py
+copy tools\template\gui.py.template tools\my_tool\gui.py
+copy tools\template\constants.json.template tools\my_tool\constants.json
 ```
+
+템플릿 변수 치환: `{{TOOL_ID}}`, `{{TOOL_NAME}}`, `{{TOOL_CLASS}}` 등
+
+자세한 내용은 `tools/template/README.md` 참고
 
 ### 3. 도구 등록
 
-`tools/my_tool/__init__.py` 파일 생성:
+템플릿의 `__init__.py.template`을 사용하거나 직접 작성:
 
 ```python
 from __future__ import annotations
@@ -134,7 +140,7 @@ class MyTool:
     def create_widget(self, parent=None):
         """GUI 윈도우 생성"""
         window = MyToolWindow(parent)
-        window.resize(800, 600)
+        # Designer에서 설정한 윈도우 크기가 자동 적용됨
         return window
 ```
 
@@ -164,6 +170,14 @@ python main_gui.py
 
 ## 코드 구조 설명
 
+### 공통 유틸리티 (`tools/common/`)
+
+- **file_utils.py**: 파일 관련 범용 함수 (ensure_write, list_files)
+- **path_utils.py**: 경로 관련 범용 함수 (natural_sort_key)
+- **ui_utils.py**: UI 관련 범용 함수 (load_ui_file)
+
+모든 도구에서 공통으로 사용 가능한 함수들입니다.
+
 ### 도구 등록 시스템 (`tools/__init__.py`)
 
 - **ToolInfo**: 도구의 메타데이터 (이름, 설명, 아이콘)
@@ -179,12 +193,22 @@ python main_gui.py
 
 ### 도구 구현 패턴
 
-각 도구는 다음을 만족해야 합니다:
+각 도구는 다음 구조를 따릅니다:
 
-1. `QMainWindow` 또는 `QWidget`을 상속한 GUI 클래스
-2. `ToolInfo` 객체로 메타데이터 정의
-3. `create_widget(parent)` 메서드를 가진 도구 클래스
-4. `tools/__init__.py`에서 자동 등록
+1. **functions.py**: 도구 전용 순수 함수 (CLI 테스트 지원)
+2. **pipeline.py**: 연산 Pipeline (Worker 클래스, CLI 테스트 지원)
+3. **gui.py**: GUI 구현 (Designer .ui 파일 로드)
+4. **constants.json**: GUI 표시값 <-> 메서드명 매핑
+5. **__init__.py**: 도구 등록 정보
+6. **ui/main.ui**: Designer 파일
+
+### 개발 워크플로우
+
+자세한 내용은 `tools/template/WORKFLOW.md` 참고:
+
+1. **기능 개발**: functions.py, pipeline.py 작성 및 CLI 테스트
+2. **GUI 디자인**: Designer로 ui/main.ui 생성
+3. **통합**: gui.py에서 UI 로드 및 Pipeline 연결
 
 ## 디버깅
 

@@ -1,0 +1,101 @@
+"""{{TOOL_NAME}} 도구의 연산 Pipeline"""
+from __future__ import annotations
+
+from PySide6.QtCore import QObject, Signal, Slot
+
+# TODO: 필요한 common 함수들 import
+# from tools.common.file_utils import ensure_write, list_files
+# from tools.common.path_utils import natural_sort_key
+
+# TODO: 도구 전용 함수들 import
+# from tools.{{TOOL_ID}}.functions import example_function
+
+
+class {{TOOL_CLASS}}Worker(QObject):
+    """{{TOOL_NAME}} 작업을 처리하는 Worker (Pipeline)"""
+    progressed = Signal(str)
+    progress = Signal(int, int)  # current, total
+    finished = Signal(int, int)
+    failed = Signal(str)
+
+    def __init__(
+        self,
+        # TODO: 필요한 파라미터 추가
+    ) -> None:
+        super().__init__()
+        # TODO: 파라미터 저장
+
+    @Slot()
+    def run(self) -> None:
+        """작업 실행"""
+        try:
+            # TODO: 비즈니스 로직 구현
+            # 1. 입력값 검증
+            # 2. 범용 함수 호출 (tools.common.*)
+            # 3. 도구 전용 함수 호출 (tools.{{TOOL_ID}}.functions.*)
+            # 4. 결과 처리
+            
+            self.progress.emit(0, 1)
+            self.finished.emit(1, 1)
+        except Exception as e:  # noqa: BLE001
+            self.failed.emit(str(e))
+
+
+# CLI 테스트 지원
+if __name__ == "__main__":
+    import sys
+    import argparse
+    from PySide6.QtCore import QCoreApplication, QThread
+    
+    parser = argparse.ArgumentParser(description="{{TOOL_NAME}} Pipeline 테스트")
+    # TODO: CLI 파라미터 추가
+    # parser.add_argument('--input', type=str, required=True, help='입력')
+    
+    args = parser.parse_args()
+    
+    # QApplication 생성 (GUI 없이)
+    app = QCoreApplication(sys.argv)
+    
+    # Worker 생성
+    worker = {{TOOL_CLASS}}Worker(
+        # TODO: 파라미터 전달
+    )
+    
+    # 시그널 연결
+    def on_progressed(text: str):
+        print(text, end='')
+    
+    def on_progress(current: int, total: int):
+        print(f"\r진행률: {current}/{total} ({current*100//total if total > 0 else 0}%)", end='', flush=True)
+    
+    def on_finished(ok: int, total: int):
+        print(f"\n완료: {ok}/{total} 항목 처리됨")
+        app.quit()
+    
+    def on_failed(msg: str):
+        print(f"\n오류: {msg}")
+        app.quit()
+    
+    worker.progressed.connect(on_progressed)
+    worker.progress.connect(on_progress)
+    worker.finished.connect(on_finished)
+    worker.failed.connect(on_failed)
+    
+    # Worker를 스레드에서 실행
+    thread = QThread()
+    worker.moveToThread(thread)
+    thread.started.connect(worker.run)
+    thread.finished.connect(app.quit)
+    thread.start()
+    
+    print("작업 시작...")
+    print("-" * 50)
+    
+    app.exec()
+    
+    thread.quit()
+    thread.wait()
+    
+    print("-" * 50)
+    print("테스트 완료")
+

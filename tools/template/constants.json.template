@@ -1,0 +1,13 @@
+{
+  "example_mode": {
+    "display": [
+      "모드 1",
+      "모드 2"
+    ],
+    "mapping": {
+      "모드 1": "method1",
+      "모드 2": "method2"
+    }
+  }
+}
+

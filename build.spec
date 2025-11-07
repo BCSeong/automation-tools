@@ -11,14 +11,26 @@ a = Analysis(
     ['main_gui.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        # .ui 파일 포함 (Designer로 만든 UI 파일)
+        ('tools/*/ui/*.ui', 'tools'),
+        # constants.json 파일 포함
+        ('tools/*/constants.json', 'tools'),
+    ],
     hiddenimports=[
         'PySide6.QtCore',
         'PySide6.QtGui',
         'PySide6.QtWidgets',
+        'PySide6.QtUiTools',
         'tools',
+        'tools.common',
+        'tools.common.file_utils',
+        'tools.common.path_utils',
+        'tools.common.ui_utils',
         'tools.renamer',
         'tools.renamer.gui',
+        'tools.renamer.pipeline',
+        'tools.renamer.functions',
     ],
     hookspath=[],
     hooksconfig={},

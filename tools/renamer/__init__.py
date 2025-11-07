@@ -20,6 +20,6 @@ class RenamerTool:
     def create_widget(self, parent=None):
         """Renamer GUI 윈도우 생성"""
         window = RenamerWindow(parent)
-        window.resize(800, 600)
+        # Designer에서 설정한 윈도우 크기가 자동 적용됨
         return window
 

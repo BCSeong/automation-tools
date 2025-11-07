@@ -59,15 +59,15 @@ class MainWindow(QMainWindow):
         # 등록된 도구들을 버튼으로 표시
         registered_tools = tools.get_registered_tools()
         
+        row = 0  # row 초기화 (도구가 없을 때를 대비)
+        col = 0
+        cols_per_row = 3  # 한 줄에 3개씩 배치
+        
         if not registered_tools:
             no_tools_label = QLabel("등록된 도구가 없습니다.")
             no_tools_label.setAlignment(Qt.AlignCenter)
             tools_layout.addWidget(no_tools_label, 0, 0)
         else:
-            row = 0
-            col = 0
-            cols_per_row = 3  # 한 줄에 3개씩 배치
-            
             for tool_id, tool_info in registered_tools.items():
                 btn = self._create_tool_button(tool_id, tool_info)
                 tools_layout.addWidget(btn, row, col)
