@@ -265,6 +265,26 @@ pytest tests/
 - [ ] 각 도구 팝업 정상 작동 확인
 - [ ] EXE 빌드 후 실행 확인
 
+## 로깅
+
+프로젝트에서 로깅을 사용하는 방법은 [LOGGING.md](LOGGING.md)를 참고하세요.
+
+### 빠른 시작
+
+```python
+from tools.common.log_utils import get_tool_logger
+
+logger = get_tool_logger("my_tool")
+logger.info("Task started")
+logger.error("Error occurred: %s", error_message)
+```
+
+**중요**: 모든 로그 메시지는 영문으로 작성해야 합니다. 자세한 내용은 [LOGGING.md](LOGGING.md)를 참고하세요.
+
+로그 파일은 다음 위치에 저장됩니다:
+- **개발 모드**: `프로젝트_루트/logs/`
+- **EXE 모드**: `실행파일과_같은_디렉토리/logs/`
+
 ## 버전 관리
 
 ### Git 사용 권장

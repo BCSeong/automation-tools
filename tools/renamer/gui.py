@@ -20,6 +20,7 @@ from PySide6.QtGui import QColor, QBrush
 from tools.common.file_utils import list_files
 from tools.common.path_utils import natural_sort_key
 from tools.common.ui_utils import load_ui_file
+from tools.common.log_utils import get_tool_logger
 from tools.renamer.pipeline import RenamerWorker
 
 
@@ -28,6 +29,7 @@ class RenamerWindow(QMainWindow):
     
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.logger = get_tool_logger("renamer")
         self.constants = self._load_constants()
         self._load_ui()
         self._apply_config_to_ui()
@@ -35,6 +37,7 @@ class RenamerWindow(QMainWindow):
 
         self.thread: QThread | None = None
         self.worker: RenamerWorker | None = None
+        self.logger.info("RenamerWindow initialized")
 
     def _load_constants(self) -> dict:
         """constants.json 로드"""
@@ -220,6 +223,7 @@ class RenamerWindow(QMainWindow):
 
         self._set_running(True)
         self.log.appendPlainText("작업 시작...")
+        self.logger.info("User started renaming task: folder=%s, pattern=%s", folder, pattern)
 
         self.thread = QThread(self)
         self.worker = RenamerWorker(
@@ -396,6 +400,7 @@ class RenamerWindow(QMainWindow):
         """작업 완료"""
         msg = f"완료: {ok}/{total}"
         self.log.appendPlainText(msg)
+        self.logger.info("Renaming task finished: %d/%d files processed", ok, total)
         self._cleanup_worker()
         self._set_running(False)
 
@@ -404,6 +409,7 @@ class RenamerWindow(QMainWindow):
         """작업 실패"""
         error_msg = f"오류: {msg}"
         self.log.appendPlainText(error_msg)
+        self.logger.error("Renaming task failed: %s", msg)
         self._cleanup_worker()
         self._set_running(False)
 

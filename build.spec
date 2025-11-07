@@ -27,6 +27,7 @@ a = Analysis(
         'tools.common.file_utils',
         'tools.common.path_utils',
         'tools.common.ui_utils',
+        'tools.common.log_utils',
         'tools.renamer',
         'tools.renamer.gui',
         'tools.renamer.pipeline',
