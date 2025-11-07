@@ -34,7 +34,7 @@ def get_log_directory() -> Path:
 def setup_logger(
     name: str,
     log_file: Optional[str | Path] = None,
-    level: int = logging.INFO,
+    level: int = logging.DEBUG,
     format_string: Optional[str] = None,
 ) -> logging.Logger:
     """로거 설정 및 반환
@@ -74,10 +74,10 @@ def setup_logger(
     
     # 파일 핸들러 (로그 파일 저장)
     if log_file is None:
-        # 자동 파일명: YYYY-MM-DD_tool-name.log
+        # 모든 로거가 동일한 로그 파일을 사용하도록 통합
         timestamp = datetime.now().strftime('%Y-%m-%d')
         log_dir = get_log_directory()
-        log_file = log_dir / f"{timestamp}_{name}.log"
+        log_file = log_dir / f"{timestamp}_automation-tools.log"
     else:
         log_file = Path(log_file)
         if not log_file.is_absolute():
@@ -94,7 +94,7 @@ def setup_logger(
     return logger
 
 
-def get_tool_logger(tool_name: str, level: int = logging.INFO) -> logging.Logger:
+def get_tool_logger(tool_name: str, level: int = logging.DEBUG) -> logging.Logger:
     """도구별 로거 생성 (간편 함수)
     
     Args:
