@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from tools.common.file_utils import ensure_write, list_files
 from tools.common.path_utils import natural_sort_key
+from tools.common.log_utils import get_tool_logger
 from tools.renamer.functions import build_new_name, build_keep_name
 
 
@@ -42,6 +43,7 @@ class RenamerWorker(QObject):
         verbose: bool,
     ) -> None:
         super().__init__()
+        self.logger = get_tool_logger("renamer")
         self.folder = folder
         self.pattern = pattern
         self.rename_method = rename_method
@@ -74,13 +76,22 @@ class RenamerWorker(QObject):
     def run(self) -> None:
         """작업 실행"""
         try:
+            self.logger.info("Renaming task started: folder=%s, pattern=%s, method=%s", 
+                           self.folder, self.pattern, self.rename_method)
+            
             if not self.folder.exists() or not self.folder.is_dir():
+                error_msg = f"Invalid folder path: {self.folder}"
+                self.logger.error(error_msg)
                 self.failed.emit("폴더 경로가 유효하지 않습니다.")
                 return
 
             # 범용 함수 사용
             paths = list_files(self.folder, self.pattern, recursive=True)
+            self.logger.debug("Found %d files matching pattern '%s'", len(paths), self.pattern)
+            
             if len(paths) == 0:
+                self.logger.warning("No files found matching pattern '%s' in folder: %s", 
+                                  self.pattern, self.folder)
                 self.finished.emit(0, 0)
                 return
 
@@ -106,14 +117,20 @@ class RenamerWorker(QObject):
 
             # 선택 규칙 필터 적용
             if self.apply_selection and self.sel_division and self.sel_division > 0:
+                original_count = len(pairs)
                 pairs = [ (p, i) for (p, i) in pairs if (i - self.sel_offset) % self.sel_division == 0 ]
+                self.logger.debug("Selection filter applied: %d -> %d files", 
+                                original_count, len(pairs))
 
             if len(pairs) == 0:
+                self.logger.warning("No files to process after filtering")
                 self.finished.emit(0, 0)
                 return
 
             count_ok = 0
             count_total = len(pairs)
+            self.logger.info("Processing %d files (move=%s, overwrite=%s, dry_run=%s)", 
+                           count_total, self.move, self.overwrite, self.dry_run)
 
             # 초기 진행률 알림
             self.progress.emit(0, count_total)
@@ -192,8 +209,11 @@ class RenamerWorker(QObject):
             if text:
                 self.progressed.emit(text)
 
+            self.logger.info("Task completed: %d/%d files processed successfully", 
+                           count_ok, count_total)
             self.finished.emit(count_ok, count_total)
         except Exception as e:  # noqa: BLE001
+            self.logger.error("Task failed: %s", str(e), exc_info=True)
             self.failed.emit(str(e))
 
 

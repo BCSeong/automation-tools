@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from tools.common.ui_utils import load_ui_file
+from tools.common.log_utils import get_tool_logger
 from tools.{{TOOL_ID}}.pipeline import {{TOOL_CLASS}}Worker
 
 
@@ -23,6 +24,7 @@ class {{TOOL_CLASS}}Window(QMainWindow):
     
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self.logger = get_tool_logger("{{TOOL_ID}}")  # 로깅 설정
         self.constants = self._load_constants()
         self._load_ui()
         self._apply_config_to_ui()
