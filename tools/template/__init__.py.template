@@ -1,0 +1,26 @@
+"""{{TOOL_NAME}} 도구"""
+from __future__ import annotations
+
+from tools import ToolInfo
+from tools.{{TOOL_ID}}.gui import {{TOOL_CLASS}}Window
+
+__all__ = ["{{TOOL_CLASS}}Tool", "{{TOOL_CLASS_UPPER}}_INFO"]
+
+
+{{TOOL_CLASS_UPPER}}_INFO = ToolInfo(
+    name="{{TOOL_DISPLAY_NAME}}",
+    description="{{TOOL_DESCRIPTION}}",
+    icon=None,
+)
+
+
+class {{TOOL_CLASS}}Tool:
+    """{{TOOL_NAME}} 도구 클래스"""
+    
+    def create_widget(self, parent=None):
+        """{{TOOL_NAME}} GUI 윈도우 생성"""
+        window = {{TOOL_CLASS}}Window(parent)
+        # Designer에서 설정한 윈도우 크기가 자동 적용됨
+        # 필요시 여기서 추가 설정 가능
+        return window
+

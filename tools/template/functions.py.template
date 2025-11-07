@@ -1,0 +1,39 @@
+"""{{TOOL_NAME}} 도구 전용 함수들"""
+from __future__ import annotations
+
+
+def example_function(param1: str, param2: int) -> str:
+    """예시 함수
+    
+    Args:
+        param1: 첫 번째 파라미터
+        param2: 두 번째 파라미터
+        
+    Returns:
+        처리 결과
+        
+    Example:
+        >>> result = example_function("test", 10)
+        >>> print(result)
+    """
+    # TODO: 함수 구현
+    return f"{param1}_{param2}"
+
+
+# CLI 테스트 지원
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="{{TOOL_NAME}} 함수 테스트")
+    parser.add_argument('--test', type=str, choices=['example_function'], 
+                        required=True, help='테스트할 함수')
+    parser.add_argument('--param1', type=str, default='test', help='param1 값')
+    parser.add_argument('--param2', type=int, default=10, help='param2 값')
+    
+    args = parser.parse_args()
+    
+    if args.test == 'example_function':
+        result = example_function(args.param1, args.param2)
+        print(f"example_function 결과: {result}")
+        print(f"  입력: param1={args.param1}, param2={args.param2}")
+

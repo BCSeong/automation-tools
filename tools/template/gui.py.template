@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""{{TOOL_NAME}} 도구의 GUI"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+from PySide6.QtCore import QThread, Signal, Slot
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QWidget,
+)
+
+from tools.common.ui_utils import load_ui_file
+from tools.{{TOOL_ID}}.pipeline import {{TOOL_CLASS}}Worker
+
+
+class {{TOOL_CLASS}}Window(QMainWindow):
+    """{{TOOL_NAME}} GUI"""
+    
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.constants = self._load_constants()
+        self._load_ui()
+        self._apply_config_to_ui()
+        self._connect()
+
+        self.thread = None
+        self.worker = None
+
+    def _load_constants(self) -> dict:
+        """constants.json 로드 (GUI 표시값 <-> 메서드명 매핑)"""
+        import json
+        config_path = Path(__file__).parent / 'constants.json'
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    
+    def _apply_config_to_ui(self) -> None:
+        """constants.json의 설정을 UI에 적용 (ComboBox 항목만)
+        
+        주의: GUI 기본값, 범위, 체크박스 상태는 모두 Designer에서 설정한 것을 사용
+        """
+        # TODO: ComboBox 항목 설정
+        # 예:
+        # if hasattr(self, 'combo_mode'):
+        #     modes = self.constants.get('example_mode', {}).get('display', [])
+        #     self.combo_mode.addItems(modes)
+        pass
+
+    def _load_ui(self) -> None:
+        """Designer .ui 파일 로드
+        
+        공통 유틸리티 함수를 사용하여 간단하게 UI를 로드합니다.
+        Designer에서 설정한 objectName으로 위젯에 접근할 수 있습니다.
+        """
+        ui_path = Path(__file__).parent / 'ui' / 'main.ui'
+        load_ui_file(ui_path, self)
+        # .ui 파일에서 설정한 기본값이 자동 적용됨
+
+    def _connect(self) -> None:
+        """시그널-슬롯 연결"""
+        # TODO: 위젯의 objectName을 사용하여 연결
+        # 예: self.btn_run.clicked.connect(self._on_run)
+        # Designer에서 위젯의 objectName을 설정해야 함
+        pass
+
+    def _validate(self) -> dict | None:
+        """입력값 검증"""
+        # TODO: 입력값 검증 로직
+        # Designer에서 설정한 위젯의 objectName을 사용하여 접근
+        return {}
+
+    def _start_worker(self) -> None:
+        """Worker 시작"""
+        validated = self._validate()
+        if not validated:
+            return
+
+        self._set_running(True)
+        self.log.appendPlainText("작업 시작...")  # 메시지는 하드코딩
+
+        self.thread = QThread(self)
+        # TODO: GUI 값 -> 메서드명 매핑 (constants.json 사용)
+        # 예: mode_display = self.combo_mode.currentText()
+        #     method_name = self.constants.get('example_mode', {}).get('mapping', {}).get(mode_display, 'method1')
+        
+        self.worker = {{TOOL_CLASS}}Worker(
+            # TODO: 파라미터 전달
+            # method_name=method_name,  # 매핑된 메서드명 전달
+        )
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.progressed.connect(self._on_progress)
+        self.worker.progress.connect(self._on_progress_update)
+        self.worker.finished.connect(self._on_finished)
+        self.worker.failed.connect(self._on_failed)
+        self.thread.start()
+
+
+    @Slot()
+    def _on_run(self) -> None:
+        """실행"""
+        self._start_worker()
+
+    @Slot(str)
+    def _on_progress(self, text: str) -> None:
+        """진행 로그 업데이트"""
+        if text:
+            self.log.appendPlainText(text.rstrip("\n"))
+
+    @Slot(int, int)
+    def _on_progress_update(self, current: int, total: int) -> None:
+        """진행률 업데이트"""
+        if total <= 0:
+            self.progress.setRange(0, 0)
+            return
+        self.progress.setRange(0, total)
+        self.progress.setValue(current)
+
+    @Slot()
+    def _on_clear_log(self) -> None:
+        """로그 삭제"""
+        self.log.clear()
+
+    @Slot(int, int)
+    def _on_finished(self, ok: int, total: int) -> None:
+        """작업 완료"""
+        msg = f"완료: {ok}/{total}"  # 메시지는 하드코딩
+        self.log.appendPlainText(msg)
+        self._cleanup_worker()
+        self._set_running(False)
+
+    @Slot(str)
+    def _on_failed(self, msg: str) -> None:
+        """작업 실패"""
+        error_msg = f"오류: {msg}"  # 메시지는 하드코딩
+        self.log.appendPlainText(error_msg)
+        self._cleanup_worker()
+        self._set_running(False)
+
+    def _cleanup_worker(self) -> None:
+        """Worker 정리"""
+        if self.thread and self.worker:
+            self.thread.quit()
+            self.thread.wait()
+        self.thread = None
+        self.worker = None
+
+    def _set_running(self, running: bool) -> None:
+        """실행 중 상태 설정"""
+        # TODO: 실행 중 비활성화할 위젯 목록 추가
+        # Designer에서 설정한 위젯의 objectName을 사용
+        pass
+
+
+def main() -> None:
+    """독립 실행용 (테스트)"""
+    app = QApplication(sys.argv)
+    win = {{TOOL_CLASS}}Window()
+    win.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
