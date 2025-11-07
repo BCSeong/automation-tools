@@ -5,18 +5,37 @@ cmd로 현재 경로 진입, 아래 커맨드 입력
 > pyinstaller build.spec
 """
 
+import glob
+from pathlib import Path
+
 block_cipher = None
+
+
+def collect_tool_datas() -> list[tuple[str, str]]:
+    """tools/* 하위의 ui 및 constants 데이터를 PyInstaller용으로 수집"""
+    datas: list[tuple[str, str]] = []
+    patterns = [
+        'tools/*/ui/*.ui',
+        'tools/*/constants.json',
+    ]
+
+    for pattern in patterns:
+        for src_path in glob.glob(pattern, recursive=False):
+            src = Path(src_path)
+            # dist 내부에서도 동일한 폴더 구조 유지 (tools/...)
+            dest = str(src.parent)
+            datas.append((str(src), dest))
+
+    return datas
+
+
+tool_datas = collect_tool_datas()
 
 a = Analysis(
     ['main_gui.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        # .ui 파일 포함 (Designer로 만든 UI 파일)
-        ('tools/*/ui/*.ui', 'tools'),
-        # constants.json 파일 포함
-        ('tools/*/constants.json', 'tools'),
-    ],
+    datas=tool_datas,
     hiddenimports=[
         'PySide6.QtCore',
         'PySide6.QtGui',

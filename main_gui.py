@@ -13,10 +13,12 @@ from PySide6.QtWidgets import (
     QLabel,
     QScrollArea,
     QGridLayout,
+    QMessageBox,
 )
 from PySide6.QtCore import Qt
 
 import tools
+from tools.common.log_utils import get_tool_logger
 
 
 class MainWindow(QMainWindow):
@@ -24,8 +26,10 @@ class MainWindow(QMainWindow):
     
     def __init__(self) -> None:
         super().__init__()
+        self.logger = get_tool_logger("main_gui")
         self.setWindowTitle("업무 자동화 도구")
         self._open_windows: list[QWidget] = []  # 열린 도구 윈도우 추적
+        self.logger.info("MainWindow initialized")
         self._build_ui()
     
     def _build_ui(self) -> None:
@@ -58,17 +62,20 @@ class MainWindow(QMainWindow):
         
         # 등록된 도구들을 버튼으로 표시
         registered_tools = tools.get_registered_tools()
+        self.logger.debug("Registered tools: %s", list(registered_tools.keys()) if registered_tools else [])
         
         row = 0  # row 초기화 (도구가 없을 때를 대비)
         col = 0
         cols_per_row = 3  # 한 줄에 3개씩 배치
         
         if not registered_tools:
+            self.logger.warning("No tools registered")
             no_tools_label = QLabel("등록된 도구가 없습니다.")
             no_tools_label.setAlignment(Qt.AlignCenter)
             tools_layout.addWidget(no_tools_label, 0, 0)
         else:
             for tool_id, tool_info in registered_tools.items():
+                self.logger.debug("Creating button for tool: %s (%s)", tool_id, tool_info.name)
                 btn = self._create_tool_button(tool_id, tool_info)
                 tools_layout.addWidget(btn, row, col)
                 
@@ -115,33 +122,67 @@ class MainWindow(QMainWindow):
     
     def _open_tool(self, tool_id: str) -> None:
         """도구 GUI를 팝업으로 열기"""
-        widget = tools.create_tool_widget(tool_id, self)
-        if widget is None:
-            return
-        
-        # QMainWindow인 경우 show() 호출
-        if isinstance(widget, QMainWindow):
-            widget.show()
-            self._open_windows.append(widget)
-        else:
-            # QWidget인 경우 QMainWindow로 감싸서 표시
-            window = QMainWindow(self)
-            window.setWindowTitle(widget.windowTitle() if hasattr(widget, 'windowTitle') else tool_id)
-            window.setCentralWidget(widget)
-            window.resize(800, 600)
-            window.show()
-            self._open_windows.append(window)
+        self.logger.info("Opening tool: %s", tool_id)
+        try:
+            self.logger.debug("Calling tools.create_tool_widget(%s, %s)", tool_id, self)
+            widget = tools.create_tool_widget(tool_id, self)
+            self.logger.debug("create_tool_widget returned: %s (type: %s)", widget, type(widget).__name__ if widget else None)
+            
+            if widget is None:
+                self.logger.error("Failed to create widget for tool: %s (create_tool_widget returned None)", tool_id)
+                QMessageBox.warning(
+                    self,
+                    "오류",
+                    f"도구 '{tool_id}'를 열 수 없습니다.\n\n로그 파일을 확인하세요: logs/"
+                )
+                return
+            
+            # QMainWindow인 경우 show() 호출
+            if isinstance(widget, QMainWindow):
+                self.logger.debug("Widget is QMainWindow, showing directly")
+                widget.show()
+                self._open_windows.append(widget)
+                self.logger.info("Tool window opened successfully: %s", tool_id)
+            else:
+                # QWidget인 경우 QMainWindow로 감싸서 표시
+                self.logger.debug("Widget is QWidget, wrapping in QMainWindow")
+                window = QMainWindow(self)
+                window.setWindowTitle(widget.windowTitle() if hasattr(widget, 'windowTitle') else tool_id)
+                window.setCentralWidget(widget)
+                window.resize(800, 600)
+                window.show()
+                self._open_windows.append(window)
+                self.logger.info("Tool window opened successfully (wrapped): %s", tool_id)
+        except Exception as e:
+            self.logger.error("Exception while opening tool %s: %s", tool_id, str(e), exc_info=True)
+            QMessageBox.critical(
+                self,
+                "오류",
+                f"도구 '{tool_id}'를 여는 중 오류가 발생했습니다:\n\n{str(e)}\n\n로그 파일을 확인하세요: logs/"
+            )
 
 
 def main() -> None:
     """메인 함수"""
+    logger = get_tool_logger("main_gui")
+    logger.info("Application starting")
+    logger.debug("sys.argv: %s", sys.argv)
+    logger.debug("sys.frozen: %s", getattr(sys, 'frozen', False))
+    
     app = QApplication(sys.argv)
+    logger.debug("QApplication created")
     
-    window = MainWindow()
-    window.resize(800, 600)
-    window.show()
-    
-    sys.exit(app.exec())
+    try:
+        window = MainWindow()
+        logger.debug("MainWindow created")
+        window.resize(800, 600)
+        window.show()
+        logger.info("MainWindow shown")
+        
+        sys.exit(app.exec())
+    except Exception as e:
+        logger.error("Fatal error in main: %s", str(e), exc_info=True)
+        raise
 
 
 if __name__ == "__main__":
