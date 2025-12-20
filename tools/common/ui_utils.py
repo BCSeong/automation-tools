@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from PySide6.QtCore import QFile, QIODevice, QByteArray, QBuffer
 from PySide6.QtWidgets import QMainWindow, QWidget, QHeaderView, QTreeWidgetItem
 from PySide6.QtUiTools import QUiLoader
 
@@ -30,11 +31,33 @@ def load_ui_file(ui_path: Path | str, target_window: QMainWindow) -> None:
         raise FileNotFoundError(f"UI file not found: {ui_path}")
     
     loader = QUiLoader()
-    # 경로 문자열을 직접 전달
-    widget = loader.load(str(ui_path), target_window)
+    # 절대 경로로 변환
+    abs_path = ui_path.resolve()
+    abs_path_str = str(abs_path)
+    
+    # Windows에서 경로에 공백이 있을 때 QFile이 제대로 작동하지 않을 수 있으므로
+    # 파일을 직접 읽어서 QBuffer를 통해 로드하는 방식 사용
+    try:
+        # 파일을 바이너리 모드로 읽기
+        with open(abs_path, 'rb') as f:
+            file_data = f.read()
+    except IOError as e:
+        raise RuntimeError(f"Unable to read UI file: {abs_path_str} (error: {e})")
+    
+    # QByteArray와 QBuffer를 사용하여 메모리에서 로드
+    byte_array = QByteArray(file_data)
+    buffer = QBuffer(byte_array)
+    
+    if not buffer.open(QIODevice.ReadOnly):
+        raise RuntimeError(f"Unable to open buffer for UI file: {abs_path_str}")
+    
+    try:
+        widget = loader.load(buffer, None)
+    finally:
+        buffer.close()
     
     if widget is None:
-        raise RuntimeError(f"Failed to load UI file: {ui_path}")
+        raise RuntimeError(f"Failed to load UI file: {abs_path_str}. Check if the UI file is valid XML.")
     
     # QUiLoader는 새 위젯을 반환하므로, 위젯의 속성들을 현재 윈도우에 복사
     # .ui 파일의 최상위가 QMainWindow인 경우, centralWidget을 가져옴

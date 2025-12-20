@@ -86,6 +86,19 @@ def _register_all_tools():
         # 도구가 없으면 무시
     except Exception as e:
         logger.error("Unexpected error while registering renamer tool: %s", str(e), exc_info=True)
+    
+    # folder_creator 도구 등록
+    try:
+        logger.debug("Attempting to import tools.folder_creator")
+        from tools.folder_creator import FolderCreatorTool, FOLDER_CREATOR_INFO
+        logger.debug("Successfully imported FolderCreatorTool and FOLDER_CREATOR_INFO")
+        register_tool("folder_creator", FOLDER_CREATOR_INFO, FolderCreatorTool)
+        logger.info("Folder Creator tool registered successfully")
+    except ImportError as e:
+        logger.error("Failed to import folder_creator tool: %s", str(e), exc_info=True)
+        # 도구가 없으면 무시
+    except Exception as e:
+        logger.error("Unexpected error while registering folder_creator tool: %s", str(e), exc_info=True)
 
 
 # 모듈 로드 시 자동 등록

@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>파일명 변경 도구</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_folder">
+        <property name="text">
+         <string>폴더</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="folderLayout">
+        <item>
+         <widget class="QLineEdit" name="edit_folder"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_browse">
+          <property name="text">
+           <string>폴더 선택</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_pattern">
+        <property name="text">
+         <string>패턴</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="edit_pattern">
+        <property name="text">
+         <string>*</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_rename_mode">
+        <property name="text">
+         <string>이름 변경 모드</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="combo_rename_mode">
+        <item>
+         <property name="text">
+          <string>새로운 규칙으로 변경</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>현재 이름 유지</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_output_mode">
+        <property name="text">
+         <string>출력 모드</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="combo_output_mode">
+        <item>
+         <property name="text">
+          <string>원본 위치</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>다른 폴더(구조 유지)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_dest_folder">
+        <property name="text">
+         <string>결과 폴더</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QWidget" name="dst_box" native="true">
+        <layout class="QHBoxLayout" name="dstLayout">
+         <item>
+          <widget class="QLineEdit" name="edit_dst"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_dst_browse">
+           <property name="text">
+            <string>결과 폴더 선택</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_options">
+        <property name="text">
+         <string>옵션</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <layout class="QHBoxLayout" name="optionsLayout">
+        <item>
+         <widget class="QCheckBox" name="chk_move">
+          <property name="text">
+           <string>이동(이름 변경)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chk_overwrite">
+          <property name="text">
+           <string>덮어쓰기</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chk_dry">
+          <property name="text">
+           <string>드라이런</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chk_verbose">
+          <property name="text">
+           <string>자세한 로그</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chk_reset_per_folder">
+          <property name="text">
+           <string>폴더별 인덱스 초기화</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QGroupBox" name="group_select">
+      <property name="title">
+       <string>선택 및 미리보기</string>
+      </property>
+      <layout class="QFormLayout" name="selLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_scan">
+         <property name="text">
+          <string>불러오기</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QPushButton" name="btn_scan">
+         <property name="text">
+          <string>불러오기</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_apply_selection">
+         <property name="text">
+          <string>규칙 적용</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="chk_apply_selection">
+         <property name="text">
+          <string>선택 규칙 적용</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_sel_offset">
+         <property name="text">
+          <string>sel-offset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="spin_sel_offset">
+         <property name="minimum">
+          <number>-999999</number>
+         </property>
+         <property name="maximum">
+          <number>999999</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_sel_div">
+         <property name="text">
+          <string>sel-division</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="spin_sel_div">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>999999</number>
+         </property>
+         <property name="value">
+          <number>3</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QTreeWidget" name="tree">
+         <property name="columnCount">
+          <number>3</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>Index</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>RelDir</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>File</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QGroupBox" name="group_rename">
+      <property name="title">
+       <string>파일 이름 규칙</string>
+      </property>
+      <layout class="QFormLayout" name="renameLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_index_base">
+         <property name="text">
+          <string>index-base</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="combo_index_base">
+         <item>
+          <property name="text">
+           <string>1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>0</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_prefix">
+         <property name="text">
+          <string>prefix</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="edit_prefix">
+         <property name="text">
+          <string>frame</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_postfix">
+         <property name="text">
+          <string>postfix</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="edit_postfix"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_pad_width">
+         <property name="text">
+          <string>pad-width</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QSpinBox" name="spin_pad">
+         <property name="minimum">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <number>12</number>
+         </property>
+         <property name="value">
+          <number>4</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_index_mul">
+         <property name="text">
+          <string>index-mul</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QDoubleSpinBox" name="spin_index_mul">
+         <property name="decimals">
+          <number>6</number>
+         </property>
+         <property name="minimum">
+          <double>-1000.000000</double>
+         </property>
+         <property name="maximum">
+          <double>1000.000000</double>
+         </property>
+         <property name="value">
+          <double>1.000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_index_offset">
+         <property name="text">
+          <string>index-offset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSpinBox" name="spin_index_offset">
+         <property name="minimum">
+          <number>-999999</number>
+         </property>
+         <property name="maximum">
+          <number>999999</number>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <layout class="QHBoxLayout" name="actionsLayout">
+      <item>
+       <widget class="QPushButton" name="btn_preview">
+        <property name="text">
+         <string>미리보기</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_run">
+        <property name="text">
+         <string>실행</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_clear">
+        <property name="text">
+         <string>로그 삭제</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="4" column="0">
+     <widget class="QProgressBar" name="progress">
+      <property name="maximum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>0</number>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QPlainTextEdit" name="log">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
+
