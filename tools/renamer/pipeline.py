@@ -36,6 +36,7 @@ class RenamerWorker(QObject):
         sel_division: int,
         reset_per_folder: bool,
         preserve_tree: bool,
+        preserve_folder_structure: bool,
         dest_root: Path | None,
         move: bool,
         overwrite: bool,
@@ -58,6 +59,7 @@ class RenamerWorker(QObject):
         self.sel_division = sel_division
         self.reset_per_folder = reset_per_folder
         self.preserve_tree = preserve_tree
+        self.preserve_folder_structure = preserve_folder_structure
         self.dest_root = dest_root
         self.move = move
         self.overwrite = overwrite
@@ -95,20 +97,27 @@ class RenamerWorker(QObject):
                 self.finished.emit(0, 0)
                 return
 
+            # 폴더별로 그룹화 (동일 폴더 내 인덱스 매핑 우선)
+            groups: dict[str, list[Path]] = {}
+            for p in paths:
+                try:
+                    rel_parent = p.parent.relative_to(self.folder)
+                except Exception:
+                    rel_parent = Path("")
+                key = str(rel_parent)
+                groups.setdefault(key, []).append(p)
+
+            pairs = []
             if not self.reset_per_folder:
-                pairs = [(p, idx + self.index_base) for idx, p in enumerate(paths)]
+                # 폴더별로 먼저 처리하되, 인덱스는 연속적으로 유지
+                current_index = self.index_base
+                for key in sorted(groups.keys(), key=lambda s: s.lower()):
+                    group_paths = sorted(groups[key], key=natural_sort_key)
+                    for gp in group_paths:
+                        pairs.append((gp, current_index))
+                        current_index += 1
             else:
                 # 폴더별로 인덱스 초기화
-                groups: dict[str, list[Path]] = {}
-                for p in paths:
-                    try:
-                        rel_parent = p.parent.relative_to(self.folder)
-                    except Exception:
-                        rel_parent = Path("")
-                    key = str(rel_parent)
-                    groups.setdefault(key, []).append(p)
-
-                pairs = []
                 for key in sorted(groups.keys(), key=lambda s: s.lower()):
                     group_paths = sorted(groups[key], key=natural_sort_key)
                     for idx, gp in enumerate(group_paths):
@@ -165,12 +174,18 @@ class RenamerWorker(QObject):
                         )
                     
                     if self.preserve_tree and self.dest_root is not None:
-                        try:
-                            rel_parent = src.parent.relative_to(self.folder)
-                        except Exception:
-                            rel_parent = Path("")
-                        dst_dir = self.dest_root / rel_parent
-                        dst = dst_dir / new_name
+                        # 폴더 구조 유지 옵션에 따라 처리
+                        if self.preserve_folder_structure:
+                            # 폴더 구조 유지: 상대 경로를 그대로 유지
+                            try:
+                                rel_parent = src.parent.relative_to(self.folder)
+                            except Exception:
+                                rel_parent = Path("")
+                            dst_dir = self.dest_root / rel_parent
+                            dst = dst_dir / new_name
+                        else:
+                            # 폴더 구조 무시: 모든 파일을 dest_root 루트에 저장
+                            dst = self.dest_root / new_name
                     else:
                         dst = src.with_name(new_name)
 
@@ -182,7 +197,12 @@ class RenamerWorker(QObject):
                         except Exception:
                             rel_parent_for_log = Path("")
                         rel_dir_str = str(rel_parent_for_log).replace("\\", "/") or "."
-                        dest_rel_path = f"{rel_dir_str}/{new_name}" if rel_dir_str != "." else new_name
+                        # 폴더 구조 유지 여부에 따라 목적지 경로 표시
+                        if self.preserve_tree and self.dest_root is not None and self.preserve_folder_structure:
+                            dest_rel_path = f"{rel_dir_str}/{new_name}" if rel_dir_str != "." else new_name
+                        else:
+                            # 폴더 구조 무시 시 루트에 저장
+                            dest_rel_path = new_name
 
                         if dst.exists():
                             if not self.overwrite:
@@ -239,6 +259,7 @@ if __name__ == "__main__":
     parser.add_argument('--sel-division', type=int, default=0, help='선택 나눗셈')
     parser.add_argument('--reset-per-folder', action='store_true', help='폴더별 인덱스 초기화')
     parser.add_argument('--preserve-tree', action='store_true', help='폴더 구조 유지')
+    parser.add_argument('--preserve-folder-structure', action='store_true', default=True, help='저장 시 폴더 구조 유지 (preserve-tree 사용 시)')
     parser.add_argument('--dest-root', type=str, help='대상 폴더 (preserve-tree 사용 시 필수)')
     parser.add_argument('--move', action='store_true', help='이동 (기본값: 복사)')
     parser.add_argument('--overwrite', action='store_true', help='덮어쓰기')
@@ -276,6 +297,7 @@ if __name__ == "__main__":
         sel_division=args.sel_division,
         reset_per_folder=args.reset_per_folder,
         preserve_tree=args.preserve_tree,
+        preserve_folder_structure=args.preserve_folder_structure,
         dest_root=dest_root,
         move=args.move,
         overwrite=args.overwrite,

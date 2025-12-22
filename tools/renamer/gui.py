@@ -59,6 +59,16 @@ class RenamerWindow(QMainWindow):
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tree.header().setSectionResizeMode(2, QHeaderView.Stretch)
+        
+        # 현재 폴더 구조 트리 설정
+        if hasattr(self, 'tree_current_structure'):
+            self.tree_current_structure.setHeaderLabel("파일/폴더")
+            self.tree_current_structure.setRootIsDecorated(True)
+        
+        # 미리보기 트리 설정
+        if hasattr(self, 'tree_preview_structure'):
+            self.tree_preview_structure.setHeaderLabel("파일/폴더")
+            self.tree_preview_structure.setRootIsDecorated(True)
 
     def _apply_config_to_ui(self) -> None:
         """constants.json의 설정을 UI에 적용 (ComboBox 항목만)
@@ -130,7 +140,7 @@ class RenamerWindow(QMainWindow):
         if path:
             self.edit_folder.setText(path)
 
-    def _validate(self) -> tuple[Path, str, str, int, int, float, int, str, str, bool, int, int, bool, bool, Path | None, bool, bool, bool, bool] | None:
+    def _validate(self) -> tuple[Path, str, str, int, int, float, int, str, str, bool, int, int, bool, bool, bool, Path | None, bool, bool, bool, bool] | None:
         """입력값 검증 및 GUI 값 -> 라이브러리 메서드명 매핑"""
         folder = Path(self.edit_folder.text().strip())
         pattern = self.edit_pattern.text().strip() or "*"
@@ -152,6 +162,7 @@ class RenamerWindow(QMainWindow):
         sel_division = int(self.spin_sel_div.value())
         reset_per_folder = self.chk_reset_per_folder.isChecked()
         preserve_tree = self.combo_output_mode.currentIndex() == 1
+        preserve_folder_structure = self.chk_preserve_folder_structure.isChecked() if hasattr(self, 'chk_preserve_folder_structure') else True
         dest_root: Path | None = None
         if preserve_tree:
             dst_text = self.edit_dst.text().strip()
@@ -183,6 +194,7 @@ class RenamerWindow(QMainWindow):
             sel_division,
             reset_per_folder,
             preserve_tree,
+            preserve_folder_structure,
             dest_root,
             move,
             overwrite,
@@ -211,6 +223,7 @@ class RenamerWindow(QMainWindow):
             sel_division,
             reset_per_folder,
             preserve_tree,
+            preserve_folder_structure,
             dest_root,
             move,
             overwrite,
@@ -241,6 +254,7 @@ class RenamerWindow(QMainWindow):
             sel_division=sel_division,
             reset_per_folder=reset_per_folder,
             preserve_tree=preserve_tree,
+            preserve_folder_structure=preserve_folder_structure,
             dest_root=dest_root,
             move=move,
             overwrite=overwrite,
@@ -258,6 +272,9 @@ class RenamerWindow(QMainWindow):
     @Slot()
     def _on_preview(self) -> None:
         """미리보기 실행"""
+        # 미리보기 트리 업데이트
+        self._update_preview_tree()
+        # 기존 미리보기 로직 실행
         self._start_worker(dry_run_override=True)
 
     @Slot()
@@ -297,6 +314,9 @@ class RenamerWindow(QMainWindow):
         is_preserve = self.combo_output_mode.currentIndex() == 1
         self.dst_box.setEnabled(is_preserve)
         self.dst_box.setVisible(is_preserve)
+        # 체크박스는 "다른 폴더" 모드일 때만 활성화
+        if hasattr(self, 'chk_preserve_folder_structure'):
+            self.chk_preserve_folder_structure.setEnabled(is_preserve)
 
     def _update_rename_mode(self) -> None:
         """이름 변경 모드에 따른 UI 업데이트"""
@@ -315,8 +335,7 @@ class RenamerWindow(QMainWindow):
         index_base_display = self.combo_index_base.currentText()
         base = self.constants.get('index_base_options', {}).get('mapping', {}).get(index_base_display, 1)
         
-        if not self.chk_reset_per_folder.isChecked():
-            return [(p, idx + base) for idx, p in enumerate(paths)]
+        # 폴더별로 그룹화 (동일 폴더 내 인덱스 매핑 우선)
         groups: dict[str, list[Path]] = {}
         folder = Path(self.edit_folder.text().strip())
         for p in paths:
@@ -326,11 +345,22 @@ class RenamerWindow(QMainWindow):
                 rel_parent = Path("")
             key = str(rel_parent)
             groups.setdefault(key, []).append(p)
+        
         pairs: list[tuple[Path, int]] = []
-        for key in sorted(groups.keys(), key=lambda s: s.lower()):
-            group_paths = sorted(groups[key], key=natural_sort_key)
-            for idx, gp in enumerate(group_paths):
-                pairs.append((gp, idx + base))
+        if not self.chk_reset_per_folder.isChecked():
+            # 폴더별로 먼저 처리하되, 인덱스는 연속적으로 유지
+            current_index = base
+            for key in sorted(groups.keys(), key=lambda s: s.lower()):
+                group_paths = sorted(groups[key], key=natural_sort_key)
+                for gp in group_paths:
+                    pairs.append((gp, current_index))
+                    current_index += 1
+        else:
+            # 폴더별로 인덱스 초기화
+            for key in sorted(groups.keys(), key=lambda s: s.lower()):
+                group_paths = sorted(groups[key], key=natural_sort_key)
+                for idx, gp in enumerate(group_paths):
+                    pairs.append((gp, idx + base))
         return pairs
 
     def _on_scan(self) -> None:
@@ -343,6 +373,7 @@ class RenamerWindow(QMainWindow):
         paths = list_files(folder, pattern, recursive=True)
         self._populate_tree(paths)
         self._highlight_tree()
+        self._populate_current_structure_tree(paths)
 
     def _populate_tree(self, paths: list[Path]) -> None:
         """트리 위젯에 파일 목록 표시"""
@@ -394,6 +425,214 @@ class RenamerWindow(QMainWindow):
             self._on_scan()
             return
         self._highlight_tree()
+        self._update_preview_tree()
+    
+    def _populate_current_structure_tree(self, paths: list[Path]) -> None:
+        """현재 폴더 구조를 트리로 표시"""
+        if not hasattr(self, 'tree_current_structure'):
+            return
+        
+        self.tree_current_structure.clear()
+        folder = Path(self.edit_folder.text().strip())
+        
+        # 폴더 구조를 트리로 구성
+        folder_tree: dict[str, dict] = {}
+        file_tree: dict[str, list[Path]] = {}
+        
+        for p in paths:
+            try:
+                rel_path = p.relative_to(folder)
+            except Exception:
+                continue
+            
+            # 폴더 경로 분리
+            parts = rel_path.parts
+            if len(parts) == 1:
+                # 루트에 있는 파일
+                file_tree.setdefault("", []).append(p)
+            else:
+                # 하위 폴더에 있는 파일
+                folder_path = "/".join(parts[:-1])
+                file_tree.setdefault(folder_path, []).append(p)
+                
+                # 중간 폴더들 추가
+                current_path = ""
+                for part in parts[:-1]:
+                    if current_path:
+                        current_path = f"{current_path}/{part}"
+                    else:
+                        current_path = part
+                    if current_path not in folder_tree:
+                        folder_tree[current_path] = {}
+        
+        # 트리 아이템 생성
+        def create_folder_item(folder_path: str, parent_item: QTreeWidgetItem | None = None) -> QTreeWidgetItem:
+            """폴더 아이템 생성"""
+            folder_name = folder_path.split("/")[-1] if "/" in folder_path else folder_path
+            if parent_item:
+                item = QTreeWidgetItem(parent_item, [folder_name])
+            else:
+                item = QTreeWidgetItem(self.tree_current_structure, [folder_name])
+            item.setExpanded(True)
+            return item
+        
+        # 루트 파일들 추가
+        if "" in file_tree:
+            root_item = QTreeWidgetItem(self.tree_current_structure, ["."])
+            root_item.setExpanded(True)
+            for p in sorted(file_tree[""], key=natural_sort_key):
+                file_item = QTreeWidgetItem(root_item, [p.name])
+        
+        # 폴더별로 정렬하여 추가
+        for folder_path in sorted(folder_tree.keys(), key=lambda s: s.lower()):
+            parts = folder_path.split("/")
+            parent_item = None
+            current_path = ""
+            
+            for part in parts:
+                if current_path:
+                    current_path = f"{current_path}/{part}"
+                else:
+                    current_path = part
+                
+                # 이미 존재하는지 확인
+                found = False
+                if parent_item:
+                    for i in range(parent_item.childCount()):
+                        if parent_item.child(i).text(0) == part:
+                            parent_item = parent_item.child(i)
+                            found = True
+                            break
+                else:
+                    for i in range(self.tree_current_structure.topLevelItemCount()):
+                        if self.tree_current_structure.topLevelItem(i).text(0) == part:
+                            parent_item = self.tree_current_structure.topLevelItem(i)
+                            found = True
+                            break
+                
+                if not found:
+                    parent_item = create_folder_item(current_path, parent_item)
+            
+            # 해당 폴더의 파일들 추가
+            if folder_path in file_tree:
+                for p in sorted(file_tree[folder_path], key=natural_sort_key):
+                    file_item = QTreeWidgetItem(parent_item, [p.name])
+    
+    def _update_preview_tree(self) -> None:
+        """미리보기 트리 업데이트"""
+        if not hasattr(self, 'tree_preview_structure'):
+            return
+        
+        self.tree_preview_structure.clear()
+        
+        # 검증
+        validated = self._validate()
+        if not validated:
+            return
+        
+        folder, pattern, rename_method, index_base, pad_width, index_mul, index_offset, prefix, postfix, apply_selection, sel_offset, sel_division, reset_per_folder, preserve_tree, preserve_folder_structure, dest_root, move, overwrite, dry_run, verbose = validated
+        
+        # 파일 목록 가져오기
+        paths = list_files(folder, pattern, recursive=True)
+        if not paths:
+            return
+        
+        # pairs 계산
+        pairs = self._compute_pairs_for_ui(paths)
+        
+        # 파일명 생성 함수 가져오기
+        from tools.renamer.functions import build_new_name, build_keep_name
+        if rename_method == "build_keep_name":
+            build_func = build_keep_name
+        else:
+            build_func = build_new_name
+        
+        # 목적지 경로 계산
+        preview_data: dict[str, list[tuple[str, str]]] = {}  # folder_path -> [(old_name, new_name)]
+        
+        for src, index_value in pairs:
+            suffix = src.suffix
+            
+            if rename_method == "build_keep_name":
+                new_name = build_func(src.stem, suffix, prefix, postfix)
+            else:
+                new_name = build_func(index_value, suffix, pad_width, index_mul, index_offset, prefix, postfix)
+            
+            # 목적지 경로 결정
+            if preserve_tree and dest_root is not None:
+                if preserve_folder_structure:
+                    try:
+                        rel_parent = src.parent.relative_to(folder)
+                    except Exception:
+                        rel_parent = Path("")
+                    dest_folder = str(rel_parent).replace("\\", "/") if str(rel_parent) else "."
+                else:
+                    dest_folder = "."
+            else:
+                try:
+                    rel_parent = src.parent.relative_to(folder)
+                except Exception:
+                    rel_parent = Path("")
+                dest_folder = str(rel_parent).replace("\\", "/") if str(rel_parent) else "."
+            
+            preview_data.setdefault(dest_folder, []).append((src.name, new_name))
+        
+        # 트리 구성
+        def create_preview_folder_item(folder_path: str, parent_item: QTreeWidgetItem | None = None) -> QTreeWidgetItem:
+            """미리보기 폴더 아이템 생성"""
+            if folder_path == ".":
+                folder_name = dest_root.name if dest_root else "."
+            else:
+                folder_name = folder_path.split("/")[-1] if "/" in folder_path else folder_path
+            
+            if parent_item:
+                item = QTreeWidgetItem(parent_item, [folder_name])
+            else:
+                item = QTreeWidgetItem(self.tree_preview_structure, [folder_name])
+            item.setExpanded(True)
+            return item
+        
+        # 루트 파일들 추가
+        if "." in preview_data:
+            root_name = dest_root.name if (preserve_tree and dest_root) else "."
+            root_item = QTreeWidgetItem(self.tree_preview_structure, [root_name])
+            root_item.setExpanded(True)
+            for old_name, new_name in sorted(preview_data["."], key=lambda x: x[1]):
+                file_item = QTreeWidgetItem(root_item, [new_name])
+        
+        # 폴더별로 정렬하여 추가
+        for folder_path in sorted([f for f in preview_data.keys() if f != "."], key=lambda s: s.lower()):
+            parts = folder_path.split("/")
+            parent_item = None
+            current_path = ""
+            
+            for part in parts:
+                if current_path:
+                    current_path = f"{current_path}/{part}"
+                else:
+                    current_path = part
+                
+                # 이미 존재하는지 확인
+                found = False
+                if parent_item:
+                    for i in range(parent_item.childCount()):
+                        if parent_item.child(i).text(0) == part:
+                            parent_item = parent_item.child(i)
+                            found = True
+                            break
+                else:
+                    for i in range(self.tree_preview_structure.topLevelItemCount()):
+                        if self.tree_preview_structure.topLevelItem(i).text(0) == part:
+                            parent_item = self.tree_preview_structure.topLevelItem(i)
+                            found = True
+                            break
+                
+                if not found:
+                    parent_item = create_preview_folder_item(current_path, parent_item)
+            
+            # 해당 폴더의 파일들 추가
+            for old_name, new_name in sorted(preview_data[folder_path], key=lambda x: x[1]):
+                file_item = QTreeWidgetItem(parent_item, [new_name])
 
     @Slot(int, int)
     def _on_finished(self, ok: int, total: int) -> None:
@@ -444,7 +683,7 @@ class RenamerWindow(QMainWindow):
             self.chk_reset_per_folder,
             self.btn_preview,
             self.btn_run,
-        ]:
+        ] + ([self.chk_preserve_folder_structure] if hasattr(self, 'chk_preserve_folder_structure') else []):
             w.setEnabled(not running)
 
 

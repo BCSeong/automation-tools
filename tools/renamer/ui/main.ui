@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>1400</width>
     <height>600</height>
    </rect>
   </property>
@@ -103,14 +103,28 @@
       </item>
       <item row="4" column="1">
        <widget class="QWidget" name="dst_box" native="true">
-        <layout class="QHBoxLayout" name="dstLayout">
+        <layout class="QVBoxLayout" name="dstBoxLayout">
          <item>
-          <widget class="QLineEdit" name="edit_dst"/>
+          <layout class="QHBoxLayout" name="dstLayout">
+           <item>
+            <widget class="QLineEdit" name="edit_dst"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btn_dst_browse">
+             <property name="text">
+              <string>결과 폴더 선택</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="btn_dst_browse">
+          <widget class="QCheckBox" name="chk_preserve_folder_structure">
            <property name="text">
-            <string>결과 폴더 선택</string>
+            <string>저장 시 폴더 구조 유지</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -427,6 +441,48 @@
       <property name="readOnly">
        <bool>true</bool>
       </property>
+     </widget>
+    </item>
+    <item row="0" column="1" rowspan="6">
+     <widget class="QGroupBox" name="group_current_structure">
+      <property name="title">
+       <string>현재 폴더 구조</string>
+      </property>
+      <layout class="QVBoxLayout" name="currentStructureLayout">
+       <item>
+        <widget class="QTreeWidget" name="tree_current_structure">
+         <property name="headerHidden">
+          <bool>false</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>파일/폴더</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item row="0" column="2" rowspan="6">
+     <widget class="QGroupBox" name="group_preview_structure">
+      <property name="title">
+       <string>미리보기 (저장될 구조)</string>
+      </property>
+      <layout class="QVBoxLayout" name="previewStructureLayout">
+       <item>
+        <widget class="QTreeWidget" name="tree_preview_structure">
+         <property name="headerHidden">
+          <bool>false</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>파일/폴더</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
