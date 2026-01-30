@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QFileDialog,
+    QGroupBox,
     QHeaderView,
     QTreeWidget,
     QTreeWidgetItem,
@@ -65,12 +66,22 @@ class RenamerWindow(QMainWindow):
         # centralWidget 내부의 트리 위젯은 load_ui_file에서 self로 복사되지 않으므로 직접 찾아 연결
         central = self.centralWidget()
         if central:
-            tree_current = central.findChild(QTreeWidget, "tree_current_structure")
-            tree_preview = central.findChild(QTreeWidget, "tree_preview_structure")
-            if tree_current is not None:
-                self.tree_current_structure = tree_current
-            if tree_preview is not None:
-                self.tree_preview_structure = tree_preview
+            # 그룹박스 → 트리 순으로 찾아서 연결 (중첩 위젯 보장)
+            group_current = central.findChild(QGroupBox, "group_current_structure")
+            group_preview = central.findChild(QGroupBox, "group_preview_structure")
+            if group_current:
+                tree_current = group_current.findChild(QTreeWidget, "tree_current_structure")
+                if tree_current is not None:
+                    self.tree_current_structure = tree_current
+            if group_preview:
+                tree_preview = group_preview.findChild(QTreeWidget, "tree_preview_structure")
+                if tree_preview is not None:
+                    self.tree_preview_structure = tree_preview
+            # 그룹으로 못 찾은 경우 central에서 재귀 검색
+            if not hasattr(self, 'tree_current_structure') or self.tree_current_structure is None:
+                self.tree_current_structure = central.findChild(QTreeWidget, "tree_current_structure")
+            if not hasattr(self, 'tree_preview_structure') or self.tree_preview_structure is None:
+                self.tree_preview_structure = central.findChild(QTreeWidget, "tree_preview_structure")
         
         # Tree (파일명을 보여주는 table)의 위젯 헤더 설정 (Designer에서 완전히 설정 불가)
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)

@@ -3,7 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from PySide6.QtCore import QFile, QIODevice, QByteArray, QBuffer
-from PySide6.QtWidgets import QMainWindow, QWidget, QHeaderView, QTreeWidgetItem
+from PySide6.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QHeaderView,
+    QTreeWidgetItem,
+)
 from PySide6.QtUiTools import QUiLoader
 
 
@@ -72,14 +77,23 @@ def load_ui_file(ui_path: Path | str, target_window: QMainWindow) -> None:
             central.setParent(target_window)
     
     # 위젯의 모든 속성을 현재 윈도우에 복사 (objectName으로 접근 가능하도록)
-    # 이렇게 하면 Designer에서 설정한 objectName으로 직접 접근 가능
     for attr_name in dir(widget):
         if not attr_name.startswith('_') and hasattr(widget, attr_name):
             try:
                 attr_value = getattr(widget, attr_name)
-                # 위젯인 경우에만 복사 (메서드나 시그널은 제외)
                 if isinstance(attr_value, (QWidget, QHeaderView, QTreeWidgetItem)):
                     setattr(target_window, attr_name, attr_value)
             except Exception:
                 pass
+
+    # centralWidget 내부의 중첩 위젯도 objectName으로 target_window에 연결
+    central = target_window.centralWidget()
+    if central is not None:
+        for child in central.findChildren(QWidget):
+            name = child.objectName()
+            if name and not name.startswith('_'):
+                try:
+                    setattr(target_window, name, child)
+                except (AttributeError, TypeError):
+                    pass
 
