@@ -4,6 +4,7 @@ PyInstaller 빌드 설정 파일
 cmd로 현재 경로 진입, 아래 커맨드 입력
 > pyinstaller build.spec
 """
+from __future__ import annotations
 
 import glob
 from pathlib import Path

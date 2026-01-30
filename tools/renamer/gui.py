@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QHeaderView,
+    QTreeWidget,
     QTreeWidgetItem,
 )
 from PySide6.QtGui import QColor, QBrush
@@ -22,6 +23,12 @@ from tools.common.path_utils import natural_sort_key
 from tools.common.ui_utils import load_ui_file
 from tools.common.log_utils import get_tool_logger
 from tools.renamer.pipeline import RenamerWorker
+from tools.renamer.functions import (
+    build_new_name,
+    build_keep_name,
+    build_parent_folder_prefix,
+    validate_parent_folder_prefix,
+)
 
 
 class RenamerWindow(QMainWindow):
@@ -54,6 +61,16 @@ class RenamerWindow(QMainWindow):
         ui_path = Path(__file__).parent / 'ui' / 'main.ui'
         load_ui_file(ui_path, self)
         # .ui 파일에서 설정한 기본값이 자동 적용됨
+        
+        # centralWidget 내부의 트리 위젯은 load_ui_file에서 self로 복사되지 않으므로 직접 찾아 연결
+        central = self.centralWidget()
+        if central:
+            tree_current = central.findChild(QTreeWidget, "tree_current_structure")
+            tree_preview = central.findChild(QTreeWidget, "tree_preview_structure")
+            if tree_current is not None:
+                self.tree_current_structure = tree_current
+            if tree_preview is not None:
+                self.tree_preview_structure = tree_preview
         
         # Tree (파일명을 보여주는 table)의 위젯 헤더 설정 (Designer에서 완전히 설정 불가)
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -129,9 +146,12 @@ class RenamerWindow(QMainWindow):
         self.chk_apply_selection.toggled.connect(self._on_selection_changed)
         self.combo_index_base.currentIndexChanged.connect(self._on_selection_changed)
         self.chk_reset_per_folder.toggled.connect(self._on_selection_changed)
+        if hasattr(self, 'chk_preserve_folder_structure'):
+            self.chk_preserve_folder_structure.toggled.connect(self._update_add_parent_folder_prefix_visibility)
 
         self._update_output_mode()
         self._update_rename_mode()
+        self._update_add_parent_folder_prefix_visibility()
 
     @Slot()
     def _on_browse(self) -> None:
@@ -140,7 +160,7 @@ class RenamerWindow(QMainWindow):
         if path:
             self.edit_folder.setText(path)
 
-    def _validate(self) -> tuple[Path, str, str, int, int, float, int, str, str, bool, int, int, bool, bool, bool, Path | None, bool, bool, bool, bool] | None:
+    def _validate(self) -> tuple[Path, str, str, int, int, float, int, str, str, bool, int, int, bool, bool, bool, bool, Path | None, bool, bool, bool, bool] | None:
         """입력값 검증 및 GUI 값 -> 라이브러리 메서드명 매핑"""
         folder = Path(self.edit_folder.text().strip())
         pattern = self.edit_pattern.text().strip() or "*"
@@ -163,6 +183,10 @@ class RenamerWindow(QMainWindow):
         reset_per_folder = self.chk_reset_per_folder.isChecked()
         preserve_tree = self.combo_output_mode.currentIndex() == 1
         preserve_folder_structure = self.chk_preserve_folder_structure.isChecked() if hasattr(self, 'chk_preserve_folder_structure') else True
+        add_parent_folder_prefix = (
+            hasattr(self, 'chk_add_parent_folder_prefix')
+            and self.chk_add_parent_folder_prefix.isChecked()
+        )
         dest_root: Path | None = None
         if preserve_tree:
             dst_text = self.edit_dst.text().strip()
@@ -178,6 +202,36 @@ class RenamerWindow(QMainWindow):
         if not folder.exists() or not folder.is_dir():
             QMessageBox.warning(self, "경고", "유효한 폴더를 선택하세요.")
             return None
+
+        # 상위 폴더 prefix 사용 시: 모든 파일에 대해 prefix 검증
+        if preserve_tree and not preserve_folder_structure and add_parent_folder_prefix:
+            paths = list_files(folder, pattern, recursive=True)
+            if not paths:
+                QMessageBox.warning(self, "경고", "대상 파일이 없습니다.")
+                return None
+            pairs = self._compute_pairs_for_ui(paths)
+            if apply_selection and sel_division and sel_division > 0:
+                pairs = [(p, i) for (p, i) in pairs if (i - sel_offset) % sel_division == 0]
+            for src, index_value in pairs:
+                suffix = src.suffix
+                if rename_method == "build_keep_name":
+                    base_name = build_keep_name(src.stem, suffix, prefix, postfix)
+                else:
+                    base_name = build_new_name(
+                        index_value, suffix, pad_width, index_mul, index_offset, prefix, postfix
+                    )
+                try:
+                    rel_parent = src.parent.relative_to(folder)
+                except Exception:
+                    rel_parent = Path("")
+                ok, err = validate_parent_folder_prefix(rel_parent, base_name)
+                if not ok:
+                    QMessageBox.warning(
+                        self,
+                        "상위 폴더 prefix 검증 실패",
+                        f"{src}\n\n{err}",
+                    )
+                    return None
 
         return (
             folder,
@@ -195,6 +249,7 @@ class RenamerWindow(QMainWindow):
             reset_per_folder,
             preserve_tree,
             preserve_folder_structure,
+            add_parent_folder_prefix,
             dest_root,
             move,
             overwrite,
@@ -224,6 +279,7 @@ class RenamerWindow(QMainWindow):
             reset_per_folder,
             preserve_tree,
             preserve_folder_structure,
+            add_parent_folder_prefix,
             dest_root,
             move,
             overwrite,
@@ -255,6 +311,7 @@ class RenamerWindow(QMainWindow):
             reset_per_folder=reset_per_folder,
             preserve_tree=preserve_tree,
             preserve_folder_structure=preserve_folder_structure,
+            add_parent_folder_prefix=add_parent_folder_prefix,
             dest_root=dest_root,
             move=move,
             overwrite=overwrite,
@@ -317,6 +374,16 @@ class RenamerWindow(QMainWindow):
         # 체크박스는 "다른 폴더" 모드일 때만 활성화
         if hasattr(self, 'chk_preserve_folder_structure'):
             self.chk_preserve_folder_structure.setEnabled(is_preserve)
+        self._update_add_parent_folder_prefix_visibility()
+
+    def _update_add_parent_folder_prefix_visibility(self) -> None:
+        """상위 폴더 prefix 체크박스는 '저장 시 폴더 구조 유지' 해제 시에만 표시"""
+        if not hasattr(self, 'chk_add_parent_folder_prefix'):
+            return
+        is_other_folder = self.combo_output_mode.currentIndex() == 1
+        structure_preserved = self.chk_preserve_folder_structure.isChecked() if hasattr(self, 'chk_preserve_folder_structure') else True
+        self.chk_add_parent_folder_prefix.setVisible(is_other_folder and not structure_preserved)
+        self.chk_add_parent_folder_prefix.setEnabled(is_other_folder and not structure_preserved)
 
     def _update_rename_mode(self) -> None:
         """이름 변경 모드에 따른 UI 업데이트"""
@@ -530,7 +597,7 @@ class RenamerWindow(QMainWindow):
         if not validated:
             return
         
-        folder, pattern, rename_method, index_base, pad_width, index_mul, index_offset, prefix, postfix, apply_selection, sel_offset, sel_division, reset_per_folder, preserve_tree, preserve_folder_structure, dest_root, move, overwrite, dry_run, verbose = validated
+        folder, pattern, rename_method, index_base, pad_width, index_mul, index_offset, prefix, postfix, apply_selection, sel_offset, sel_division, reset_per_folder, preserve_tree, preserve_folder_structure, add_parent_folder_prefix, dest_root, move, overwrite, dry_run, verbose = validated
         
         # 파일 목록 가져오기
         paths = list_files(folder, pattern, recursive=True)
@@ -539,9 +606,10 @@ class RenamerWindow(QMainWindow):
         
         # pairs 계산
         pairs = self._compute_pairs_for_ui(paths)
+        if apply_selection and sel_division and sel_division > 0:
+            pairs = [(p, i) for (p, i) in pairs if (i - sel_offset) % sel_division == 0]
         
         # 파일명 생성 함수 가져오기
-        from tools.renamer.functions import build_new_name, build_keep_name
         if rename_method == "build_keep_name":
             build_func = build_keep_name
         else:
@@ -557,6 +625,16 @@ class RenamerWindow(QMainWindow):
                 new_name = build_func(src.stem, suffix, prefix, postfix)
             else:
                 new_name = build_func(index_value, suffix, pad_width, index_mul, index_offset, prefix, postfix)
+            
+            # 상위 폴더 이름을 prefix로 추가 (이름 변경 모드와 독립)
+            if preserve_tree and dest_root is not None and not preserve_folder_structure and add_parent_folder_prefix:
+                try:
+                    rel_parent = src.parent.relative_to(folder)
+                except Exception:
+                    rel_parent = Path("")
+                prefix_str = build_parent_folder_prefix(rel_parent)
+                if prefix_str:
+                    new_name = f"{prefix_str}_{new_name}"
             
             # 목적지 경로 결정
             if preserve_tree and dest_root is not None:
@@ -683,7 +761,7 @@ class RenamerWindow(QMainWindow):
             self.chk_reset_per_folder,
             self.btn_preview,
             self.btn_run,
-        ] + ([self.chk_preserve_folder_structure] if hasattr(self, 'chk_preserve_folder_structure') else []):
+        ] + ([self.chk_preserve_folder_structure, self.chk_add_parent_folder_prefix] if hasattr(self, 'chk_preserve_folder_structure') and hasattr(self, 'chk_add_parent_folder_prefix') else []):
             w.setEnabled(not running)
 
 

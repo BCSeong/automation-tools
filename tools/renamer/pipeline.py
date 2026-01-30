@@ -10,7 +10,12 @@ from PySide6.QtCore import QObject, Signal, Slot
 from tools.common.file_utils import ensure_write, list_files
 from tools.common.path_utils import natural_sort_key
 from tools.common.log_utils import get_tool_logger
-from tools.renamer.functions import build_new_name, build_keep_name
+from tools.renamer.functions import (
+    build_new_name,
+    build_keep_name,
+    build_parent_folder_prefix,
+    validate_parent_folder_prefix,
+)
 
 
 class RenamerWorker(QObject):
@@ -37,6 +42,7 @@ class RenamerWorker(QObject):
         reset_per_folder: bool,
         preserve_tree: bool,
         preserve_folder_structure: bool,
+        add_parent_folder_prefix: bool,
         dest_root: Path | None,
         move: bool,
         overwrite: bool,
@@ -60,6 +66,7 @@ class RenamerWorker(QObject):
         self.reset_per_folder = reset_per_folder
         self.preserve_tree = preserve_tree
         self.preserve_folder_structure = preserve_folder_structure
+        self.add_parent_folder_prefix = add_parent_folder_prefix
         self.dest_root = dest_root
         self.move = move
         self.overwrite = overwrite
@@ -173,6 +180,26 @@ class RenamerWorker(QObject):
                             self.postfix,
                         )
                     
+                    # 상위 폴더 이름을 prefix로 추가 (이름 변경 모드와 독립적으로 적용)
+                    if (
+                        self.preserve_tree
+                        and self.dest_root is not None
+                        and not self.preserve_folder_structure
+                        and self.add_parent_folder_prefix
+                    ):
+                        try:
+                            rel_parent = src.parent.relative_to(self.folder)
+                        except Exception:
+                            rel_parent = Path("")
+                        ok, err = validate_parent_folder_prefix(rel_parent, new_name)
+                        if not ok:
+                            self.logger.error("Parent folder prefix validation failed: %s", err)
+                            self.failed.emit(err)
+                            return
+                        prefix_str = build_parent_folder_prefix(rel_parent)
+                        if prefix_str:
+                            new_name = f"{prefix_str}_{new_name}"
+                    
                     if self.preserve_tree and self.dest_root is not None:
                         # 폴더 구조 유지 옵션에 따라 처리
                         if self.preserve_folder_structure:
@@ -260,6 +287,7 @@ if __name__ == "__main__":
     parser.add_argument('--reset-per-folder', action='store_true', help='폴더별 인덱스 초기화')
     parser.add_argument('--preserve-tree', action='store_true', help='폴더 구조 유지')
     parser.add_argument('--preserve-folder-structure', action='store_true', default=True, help='저장 시 폴더 구조 유지 (preserve-tree 사용 시)')
+    parser.add_argument('--add-parent-folder-prefix', action='store_true', help='상위 폴더 이름을 prefix로 추가 (다른 폴더 + 구조 미유지 시)')
     parser.add_argument('--dest-root', type=str, help='대상 폴더 (preserve-tree 사용 시 필수)')
     parser.add_argument('--move', action='store_true', help='이동 (기본값: 복사)')
     parser.add_argument('--overwrite', action='store_true', help='덮어쓰기')
@@ -298,6 +326,7 @@ if __name__ == "__main__":
         reset_per_folder=args.reset_per_folder,
         preserve_tree=args.preserve_tree,
         preserve_folder_structure=args.preserve_folder_structure,
+        add_parent_folder_prefix=args.add_parent_folder_prefix,
         dest_root=dest_root,
         move=args.move,
         overwrite=args.overwrite,

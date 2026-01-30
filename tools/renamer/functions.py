@@ -1,6 +1,54 @@
 """Renamer 도구 전용 함수들"""
 from __future__ import annotations
 
+from pathlib import Path
+
+# Windows 파일명에 사용 불가 문자
+INVALID_FILENAME_CHARS = set('\\/:*?"<>|')
+MAX_FILENAME_LEN = 255
+
+
+def build_parent_folder_prefix(rel_parent: Path) -> str:
+    """상대 경로를 prefix 문자열로 변환 (grandparent_parent 형태).
+    
+    Args:
+        rel_parent: 선택 폴더 기준 상대 부모 경로 (빈 Path면 루트)
+    Returns:
+        빈 문자열 또는 "part1_part2_..." 형태
+    """
+    if rel_parent is None or str(rel_parent).strip() in ("", "."):
+        return ""
+    parts = [p for p in rel_parent.parts if p.strip()]
+    return "_".join(parts) if parts else ""
+
+
+def validate_parent_folder_prefix(rel_parent: Path, new_name: str) -> tuple[bool, str]:
+    """상위 폴더 prefix가 파일명에 사용 가능한지 검사.
+    
+    Returns:
+        (True, "") 또는 (False, "에러 메시지")
+    """
+    prefix = build_parent_folder_prefix(rel_parent)
+    if not prefix:
+        if len(new_name) > MAX_FILENAME_LEN:
+            return False, f"파일명이 너무 깁니다 ({len(new_name)}자). {MAX_FILENAME_LEN}자 이하여야 합니다."
+        return True, ""
+    
+    for part in rel_parent.parts:
+        for c in INVALID_FILENAME_CHARS:
+            if c in part:
+                return False, f"폴더 이름에 사용할 수 없는 문자가 포함되어 있습니다: '{part}' (문자 '{c}')"
+        if not part.strip():
+            return False, "폴더 이름이 비어 있을 수 없습니다."
+    
+    full_name = f"{prefix}_{new_name}"
+    if len(full_name) > MAX_FILENAME_LEN:
+        return False, (
+            f"상위 폴더 prefix를 적용한 파일명이 너무 깁니다 ({len(full_name)}자). "
+            f"{MAX_FILENAME_LEN}자 이하여야 합니다."
+        )
+    return True, ""
+
 
 def build_new_name(
     index_value: int,
